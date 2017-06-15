@@ -66,6 +66,8 @@ public:
     */
     void UpdateEKF(const Eigen::VectorXd &z);
 
+    Eigen::VectorXd cartesian2polar(const Eigen::VectorXd &x);
+
 };
 
 #endif /* KALMAN_FILTER_H_ */

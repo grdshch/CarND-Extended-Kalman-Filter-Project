@@ -1,4 +1,7 @@
 #include "kalman_filter.h"
+#include "tools.h"
+
+#include <iostream>
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -25,6 +28,10 @@ void KalmanFilter::Predict() {
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
+
+    long x_size = x_.size();
+    I = MatrixXd::Identity(x_size, x_size);
+
     VectorXd y = z - H_ * x_;
     MatrixXd Ht = H_.transpose();
     MatrixXd S = H_ * P_ * Ht + R_;
@@ -35,8 +42,33 @@ void KalmanFilter::Update(const VectorXd &z) {
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Extended Kalman Filter equations
-  */
+    H_ = Tools::CalculateJacobian(x_);
+
+    long x_size = x_.size();
+    I = MatrixXd::Identity(x_size, x_size);
+
+    VectorXd y = z - cartesian2polar(x_);
+    while (y(1) > M_PI) y(1) = y(1) - 2 * M_PI;
+    while (y(1) < -M_PI) y(1) = y(1) + 2 * M_PI;
+    MatrixXd Ht = H_.transpose();
+    MatrixXd S = H_ * P_ * Ht + R_;
+    MatrixXd K = P_ * Ht * S.inverse();
+
+    x_ += K * y;
+    P_ = (I - K * H_) * P_;
+}
+
+Eigen::VectorXd KalmanFilter::cartesian2polar(const Eigen::VectorXd &x) {
+    float px = x(0), py = x(1), vx = x(2), vy = x(3);
+    VectorXd h(3);
+    float rho = sqrt(px * px + py * py);
+    if (rho < 0.001) {
+        h << 0, 0, 0;
+        return h;
+    }
+    float phi = atan2(py, px);
+    h << rho,
+         phi,
+            (px * vx + py * vy) / rho;
+    return h;
 }
